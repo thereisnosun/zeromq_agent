@@ -19,11 +19,21 @@ add_executable(wuserver wuserver.c consts.h)
 target_include_directories(wuserver PUBLIC ${ZMQ_INCLUDE_DIRS})
 target_link_libraries(wuserver PUBLIC ${LINKLIBS})
 
-add_executable(wuclient wuclient.c consts.h agent_api.h)
+add_executable(wuclient wuclient.c consts.h)
 target_include_directories(wuclient PUBLIC ${ZMQ_INCLUDE_DIRS})
 target_link_libraries(wuclient PUBLIC ${LINKLIBS})
 
-add_executable(zeromq_agent agent_api.h broker_api.h zeromq_agent.cpp)
+add_executable(zeromq_agent zeromq_agent.cpp
+    broker_api.h
+    client_api.h
+    client_api.cpp
+    general_api.h
+    reactor_loop.h
+    internal_utils.h
+    server_api.h
+    server_api.cpp
+    broker_api.cpp
+    end_points.h)
 target_include_directories(zeromq_agent PUBLIC ${ZMQ_INCLUDE_DIRS})
 target_link_libraries(zeromq_agent PUBLIC ${LINKLIBS})
 
