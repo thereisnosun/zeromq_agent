@@ -14,7 +14,7 @@ namespace zmq
     {
     public:
         /* create client with absolutely new context */
-        Client();
+        Client(SocketType type);
 
         /* create client from the session, with already created context */
         explicit Client(const ISession&);
@@ -22,7 +22,7 @@ namespace zmq
         ~Client();
 
         /* connect to the specific endpoint */
-        ErrorType connect(const std::string&);
+        ErrorType connect(const std::string& url);
 
         /* return the bytes send, if failed return -1. Blocking call.*/
         Status send(const IMessage&);

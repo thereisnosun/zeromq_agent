@@ -9,11 +9,14 @@ namespace zmq
         class ServerImpl;
     }
 
+
+
+    //TODO: add filtering message
     class Server
     {
     public:
         /* create server with absolutely new context */
-        Server();
+        Server(SocketType type);
 
         /* create server from the already created context */
         explicit Server(const ISession&);
@@ -21,10 +24,10 @@ namespace zmq
         ~Server();
 
         /* bind to the specific endpoint*/
-        ErrorType bind(const std::string&);
+        ErrorType bind(const std::string& url);
 
         /* return the bytes received, if failed return -1. Blocking call */
-        Status receive();
+        IMessage* receive();
 
         /* Will return immediatly. Call the callback on the completion*/
         void async_receive(finish_send_cbk_type&&);

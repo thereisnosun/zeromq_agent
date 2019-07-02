@@ -2,27 +2,89 @@
 #include <future>
 #include <functional>
 
-
+#include "czmq.h"
 
 namespace zmq
 {
     class IMessage
     {
     public:
-        virtual IMessage clone() const;
-        virtual void serialize() noexcept;
-        virtual void deserialize() noexcept;
-        virtual void* get_data();
-        virtual ~IMessage();
+        virtual IMessage clone() const
+        {
+            return *this;
+        }
+        virtual void serialize() noexcept
+        {
+        }
+        virtual void deserialize() noexcept
+        {
+        }
+        virtual void* get_data() const
+        {
+            return nullptr;
+        }
+        virtual int get_size() const
+        {
+            return 0;
+        }
+        virtual ~IMessage()
+        {
+        }
+    };
+
+    class SendMessage: public IMessage
+    {
+    public:
+        SendMessage(std::string message):
+            m_data(static_cast<void*>(message.data())),
+            m_size{message.size()}
+        {}
+        SendMessage(void* start_ptr, int size):
+            m_data{start_ptr},
+            m_size{size}
+        {
+        }
+        void* get_data() const override
+        {
+            return m_data;
+        }
+        int get_size() const override
+        {
+            return m_size;
+        }
+    private:
+        int m_size;
+        void* m_data;
+    };
+
+
+    class ReceiveMessage: public IMessage
+    {
+    public:
+
+    private:
     };
 
     enum class ErrorType
     {
-        OK
+        OK,
+        NOT_OK
+    };
+
+    enum class SocketType
+    {
+        REQ_REPLY,
+        PUB_SUB,
+        PUSH_PULL
     };
 
     struct Status
     {
+        Status():
+            error{ErrorType::OK},
+            bytes_send{0}
+        {
+        }
         ErrorType error;
         int bytes_send;
     };
@@ -44,6 +106,26 @@ namespace zmq
         }
         virtual ~ISession(){}
     };
+
+//    class ZeroMqSession: public ISession
+//    {
+//    public:
+//        ZeroMqSession()
+//        {
+//            //m_context = zmq_ctx_new();
+//        }
+//        void* get_context() const override
+//        {
+
+//        }
+//        std::string get_enpoint() const override
+//        {
+
+//        }
+//    private:
+//        void *m_context;
+
+//    };
 
 } //namespace zmq
 

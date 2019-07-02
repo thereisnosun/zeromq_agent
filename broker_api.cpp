@@ -15,18 +15,27 @@ namespace internal
     {
     public:
         BrokerImpl()
-        {
+        {//TODO: add error checking
              m_context = zmq_ctx_new ();
+
+             m_backend = zmq_socket(m_context, ZMQ_ROUTER);
+             m_frontend = zmq_socket(m_context, ZMQ_ROUTER);
+
              m_receivers.reserve(16);
         }
+
         ~BrokerImpl()
         {
+            zmq_close(m_backend);
+            zmq_close(m_frontend);
             zmq_ctx_destroy(m_context);
         }
+
         void register_receiver(const Receiver& receiver)
         {
 
         }
+
         void unregister_receiver(const Receiver& receiver)
         {
 
@@ -38,6 +47,8 @@ namespace internal
         }
     private:
         void* m_context;
+        void* m_backend;
+        void* m_frontend;
         std::vector<Receiver> m_receivers;
     };
 
