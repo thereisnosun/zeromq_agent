@@ -32,6 +32,9 @@ namespace zmq
         /* Will return immediatly. Call the callback on the completion*/
         void async_receive(finish_send_cbk_type&&);
 
+        /* return the bytes send, if failed return -1. Blocking call.*/
+        Status publish(const IMessage& );
+
         /* Retrieve session*/
         const ISession& get_session() const;
     private:

@@ -3,6 +3,7 @@
 //#include <czmq.h>
 //#include "czmq.h"
 #include "czmq.h"
+#include <iostream>
 
 namespace zmq
 {
@@ -16,6 +17,7 @@ namespace internal
         {
             m_context = zmq_ctx_new ();
             m_type = std::move(type);
+            m_message = new SendMessage;
         }
 
         ClientImpl(const ISession& session)
@@ -26,6 +28,7 @@ namespace internal
         ~ClientImpl()
         {
             zmq_ctx_destroy( &m_context);
+            delete m_message;
         }
 
         ErrorType connect(const std::string& url)
@@ -33,6 +36,7 @@ namespace internal
             m_socket = create_socket();
             if (!m_socket)
             {
+                std::cout << "ClientImpl Could not create a socket is - " << errno << std::endl;
                 //TODO: HANDLE
                 return ErrorType::NOT_OK;
             }
@@ -40,8 +44,20 @@ namespace internal
             int error = zmq_connect(m_socket, url.c_str());
             if (error != 0)
             {
+                std::cout << "ClientImpl: Error is - " << errno << std::endl;
                 //TODO: handle
                 return ErrorType::NOT_OK;
+            }
+
+            if (m_type == zmq::SocketType::PUB_SUB)
+            {
+                error =  zmq_setsockopt (m_socket, ZMQ_SUBSCRIBE,
+                                     NULL, 0);
+                if (error != 0)
+                {
+                    return ErrorType::NOT_OK;
+                }
+
             }
 
             return ErrorType::OK;
@@ -55,7 +71,44 @@ namespace internal
             {
                 status.error = ErrorType::NOT_OK;
             }
-            return status;;
+            return status;
+        }
+
+
+        IMessage* receive()
+        {
+            //m_message
+            Status status;
+            zmq_msg_t msg;
+            if (zmq_msg_init (&msg) != 0)
+            {
+                //TODO: handle
+                status.error = ErrorType::NOT_OK;
+                //return status;
+                return nullptr;
+            }
+
+            std::cout << "After msg init\n";
+            status.bytes_send = zmq_msg_recv(&msg, m_socket, 0);
+            if (status.bytes_send < 0)
+            {
+                std::cout << "Status bytes sent - " << status.bytes_send << ", error is "
+                          << zmq_strerror(errno) << std::endl;
+                //TODO: handle
+                status.error  = ErrorType::NOT_OK;
+                //return status;
+                return nullptr;
+            }
+            std::cout << "After recv\n";
+            void* data = zmq_msg_data(&msg);
+            int size = zmq_msg_size(&msg);
+
+            m_message->set_data(data);
+            m_message->set_size(size);
+
+            zmq_msg_close(&msg);
+
+            return m_message;
         }
 
         result_type async_send(const IMessage& message)
@@ -92,6 +145,9 @@ namespace internal
         void* m_context;
         void* m_socket;
         SocketType m_type;
+        IMessage* m_message;
+
+
         //TODO: integrate within the session
         ISession m_session;
 
@@ -121,6 +177,11 @@ ErrorType Client::connect(const std::string& url)
 Status Client::send(const IMessage& message)
 {
     return m_impl->send(message);
+}
+
+IMessage* Client::receive()
+{
+    return m_impl->receive();
 }
 
 result_type Client::async_send(const IMessage& message)

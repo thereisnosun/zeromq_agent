@@ -27,6 +27,15 @@ namespace zmq
         {
             return 0;
         }
+        virtual void set_data(void* data)
+        {
+
+        }
+        virtual void set_size(int size)
+        {
+
+        }
+
         virtual ~IMessage()
         {
         }
@@ -44,6 +53,27 @@ namespace zmq
             m_size{size}
         {
         }
+        SendMessage():
+            m_data{nullptr},
+            m_size{0}
+        {
+        }
+        SendMessage(const SendMessage& in_message):
+            m_data{in_message.m_data},
+            m_size{in_message.m_size}
+        {
+
+        }
+        SendMessage(SendMessage&& in_message):
+            m_data{std::move(in_message.m_data)},
+            m_size{std::move(in_message.m_size)}
+        {
+
+        }
+        SendMessage& operator=(SendMessage message)
+        {
+            swap(*this, message);
+        }
         void* get_data() const override
         {
             return m_data;
@@ -51,6 +81,19 @@ namespace zmq
         int get_size() const override
         {
             return m_size;
+        }
+        void set_data(void* data) override
+        {
+            m_data = data;
+        }
+        void set_size(int size) override
+        {
+            m_size = size;
+        }
+        friend void swap(SendMessage& first, SendMessage& second)
+        {
+            std::swap(first.m_data, second.m_data);
+            std::swap(first.m_size, second.m_size);
         }
     private:
         int m_size;

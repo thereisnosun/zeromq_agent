@@ -1,6 +1,7 @@
 #include "server_api.h"
 #include "czmq.h"
 
+#include <iostream>
 
 namespace zmq
 {
@@ -12,6 +13,7 @@ namespace internal
     public:
         ServerImpl(SocketType type)
         {
+            m_ctx = zmq_ctx_new ();
             m_type = std::move(type);
         }
 
@@ -19,18 +21,24 @@ namespace internal
         {
 
         }
+        ~ServerImpl()
+        {
+            zmq_ctx_destroy(m_ctx);
+        }
 
         ErrorType bind(const std::string& url)
         {
             m_socket = create_socket();
             if (!m_socket)
             {
-               return ErrorType::NOT_OK;
+                std::cout << "Could not create a socket" << errno << std::endl;
+                return ErrorType::NOT_OK;
             }
 
             int error = zmq_bind (m_socket, url.c_str());
             if (error != 0)
             {
+                std::cout << "ServerImpl: Error is - " << errno << " error:" << zmq_strerror(errno) << std::endl;
                 //TODO: handle shit
                 return ErrorType::NOT_OK;
             }
@@ -38,8 +46,25 @@ namespace internal
             return ErrorType::OK;
         }
 
+        Status publish(const IMessage &message)
+        {
+            Status status;
+            status.bytes_send = zmq_send (m_socket, message.get_data(), message.get_size(), 0);
+            if (status.bytes_send < 0)
+            {
+                status.error = ErrorType::NOT_OK;
+            }
+            return status;
+        }
+
         IMessage* receive()
         {
+
+            if (m_type == SocketType::PUB_SUB)
+            {
+                std::cout << "NOT IMPLEMENTED FOR PUB_SUB";
+                return nullptr;
+            }
             //TODO: handle multipart messages as well
             Status status;
             zmq_msg_t msg;
@@ -51,26 +76,29 @@ namespace internal
                 return nullptr;
             }
 
+            std::cout << "After msg init\n";
             status.bytes_send = zmq_msg_recv(&msg, m_socket, 0);
             if (status.bytes_send < 0)
             {
+                std::cout << "Status bytes sent - " << status.bytes_send << ", error is "
+                          << zmq_strerror(errno) << std::endl;
                 //TODO: handle
                 status.error  = ErrorType::NOT_OK;
                 //return status;
                 return nullptr;
             }
-
-
-
+            std::cout << "After recv\n";
             void* data = zmq_msg_data(&msg);
             int size = zmq_msg_size(&msg);
 
             //TODO: make it ok, not so shitty, hust quick for testing
             SendMessage* message = new SendMessage{data, size};
+            zmq_msg_close(&msg);
 
-
+            std::cout << "After SendMessage\n";
             return message;
         }
+
 
         void async_receive(finish_send_cbk_type&& cbk)
         {
@@ -141,6 +169,11 @@ void Server::async_receive(finish_send_cbk_type&& cbk)
 const ISession& Server::get_session() const
 {
     m_impl->get_session();
+}
+
+Status Server::publish(const IMessage& message)
+{
+    return m_impl->publish(message);
 }
 
 
