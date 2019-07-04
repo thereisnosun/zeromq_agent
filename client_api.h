@@ -25,7 +25,7 @@ namespace zmq
         ErrorType connect(const std::string& url);
 
         /* for PUB -> SUB pattern */
-        IMessage* receive();
+        const IMessage* receive();
 
         /* return the bytes send, if failed return -1. Blocking call.*/
         Status send(const IMessage&);

@@ -16,14 +16,17 @@ namespace zmq
     };
 
 
+
+    //TODO: if it is publish subscribe message
     class Broker
     {
     public:
-        Broker();
+        Broker(const std::string&, const std::string&);
         ~Broker();
         void register_receiver(const Receiver&);
         void unregister_receiver(const Receiver&);
 
+        void bind();
         void start_loop();
         void set_logging_cbk();
 

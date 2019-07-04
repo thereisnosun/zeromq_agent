@@ -49,7 +49,7 @@ int main (int argc, char *argv [])
         if (timeTook < min)
             min = timeTook;
         s_console("publisher took:%lu; SIZE=%d", timeTook, size);
-//        printf("RESULT = [%s]\n", buffer);
+        printf("RESULT = [%s]\n", buffer);
 //        break;
     }
     const float average = (float)totalMicroSec / (float)NUM_OF_PACKETS;

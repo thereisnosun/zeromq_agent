@@ -27,7 +27,7 @@ namespace zmq
         ErrorType bind(const std::string& url);
 
         /* return the bytes received, if failed return -1. Blocking call */
-        IMessage* receive();
+        const IMessage* receive();
 
         /* Will return immediatly. Call the callback on the completion*/
         void async_receive(finish_send_cbk_type&&);

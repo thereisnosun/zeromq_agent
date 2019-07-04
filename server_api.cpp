@@ -2,6 +2,7 @@
 #include "czmq.h"
 
 #include <iostream>
+#include <cstring>
 
 namespace zmq
 {
@@ -15,6 +16,7 @@ namespace internal
         {
             m_ctx = zmq_ctx_new ();
             m_type = std::move(type);
+            m_message = new SendMessage;
         }
 
         ServerImpl(const ISession&)
@@ -24,6 +26,8 @@ namespace internal
         ~ServerImpl()
         {
             zmq_ctx_destroy(m_ctx);
+            zmq_close(m_socket);
+            delete m_message;
         }
 
         ErrorType bind(const std::string& url)
@@ -49,7 +53,20 @@ namespace internal
         Status publish(const IMessage &message)
         {
             Status status;
-            status.bytes_send = zmq_send (m_socket, message.get_data(), message.get_size(), 0);
+            //status.bytes_send = zmq_send (m_socket, message.get_data(), message.get_size(), 0);
+            zmq_msg_t msg;
+            int error = zmq_msg_init_size (&msg, message.get_size());
+            if (error != 0)
+            {
+                std::cout << "SHIT!\n";
+                status.error = ErrorType::NOT_OK;
+                return status;
+            }
+
+
+            std::memcpy(zmq_msg_data(&msg), message.get_data(), message.get_size());
+            status.bytes_send = zmq_msg_send (&msg, m_socket, 0);
+
             if (status.bytes_send < 0)
             {
                 status.error = ErrorType::NOT_OK;
@@ -57,10 +74,9 @@ namespace internal
             return status;
         }
 
-        IMessage* receive()
+        const IMessage* receive()
         {
-
-            if (m_type == SocketType::PUB_SUB)
+            if (m_type == SocketType::PUBLISH)
             {
                 std::cout << "NOT IMPLEMENTED FOR PUB_SUB";
                 return nullptr;
@@ -87,16 +103,18 @@ namespace internal
                 //return status;
                 return nullptr;
             }
-            std::cout << "After recv\n";
             void* data = zmq_msg_data(&msg);
             int size = zmq_msg_size(&msg);
+            std::cout << "After recv. Num of bytes - " << status.bytes_send <<
+                         "Actual size - " << size << " \n";
 
-            //TODO: make it ok, not so shitty, hust quick for testing
-            SendMessage* message = new SendMessage{data, size};
+            m_message->set_data(data);
+            m_message->set_size(size);
             zmq_msg_close(&msg);
 
-            std::cout << "After SendMessage\n";
-            return message;
+            const std::string str_message{static_cast<char*>(m_message->get_data()), m_message->get_size()};
+            std::cout << "After SendMessage - " << str_message << std::endl;
+            return m_message;
         }
 
 
@@ -113,11 +131,13 @@ namespace internal
         {
             switch(m_type)
             {
-            case SocketType::PUB_SUB:
+            case SocketType::PUBLISH:
                     return zmq_socket (m_ctx, ZMQ_PUB);
-            case SocketType::PUSH_PULL:
-                    return zmq_socket (m_ctx, ZMQ_PUSH);
-            case SocketType::REQ_REPLY:
+            case SocketType::SUBSCRIBE:
+                    return zmq_socket (m_ctx, ZMQ_SUB);
+            case SocketType::REQUEST:
+                    return zmq_socket (m_ctx, ZMQ_REQ);
+            case SocketType::REPLY:
                     return zmq_socket (m_ctx, ZMQ_REP);
             }
 
@@ -127,6 +147,8 @@ namespace internal
         ISession m_session;
         void* m_ctx;
         void* m_socket;
+
+        IMessage* m_message;
 
         SocketType m_type;
 
@@ -156,7 +178,7 @@ ErrorType Server::bind(const std::string& url)
     return m_impl->bind(url);
 }
 
-IMessage* Server::receive()
+const IMessage* Server::receive()
 {
     return m_impl->receive();
 }

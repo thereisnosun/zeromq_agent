@@ -52,7 +52,9 @@ int main (void)
     srandom ((unsigned) time (NULL));
 
 
-    char *bufferToSend = generateString(TEST_SIZE);
+    const char UPDATE_TOKEN[] = "{'msg_type' : 'ipc', 'name': 'update_token', 'data': {'token': '<token>'}}";
+
+    char *bufferToSend = UPDATE_TOKEN;
     printf("LEN is %d", strlen(szBigBuffer));
     printf("Wait for key ....");
     getchar();

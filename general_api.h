@@ -116,9 +116,10 @@ namespace zmq
 
     enum class SocketType
     {
-        REQ_REPLY,
-        PUB_SUB,
-        PUSH_PULL
+        REQUEST,
+        REPLY,
+        PUBLISH,
+        SUBSCRIBE
     };
 
     struct Status
@@ -134,6 +135,14 @@ namespace zmq
 
     using result_type = std::future<Status>;
     using finish_send_cbk_type = std::function<void(Status)>;
+
+
+//    void message_fix(zmq_msg_t& msg, IMessage& message)
+//    {
+//        static const int MSG_SIZE = 8;
+
+//        std::memcpy(zmq_msg_data(&msg), message.get_data(), message.get_size());
+//    }
 
     //as we should use one context
     class ISession

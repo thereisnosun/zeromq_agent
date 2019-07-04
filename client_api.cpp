@@ -27,7 +27,8 @@ namespace internal
 
         ~ClientImpl()
         {
-            zmq_ctx_destroy( &m_context);
+            zmq_ctx_destroy(m_context);
+            zmq_close(m_socket);
             delete m_message;
         }
 
@@ -49,7 +50,7 @@ namespace internal
                 return ErrorType::NOT_OK;
             }
 
-            if (m_type == zmq::SocketType::PUB_SUB)
+            if (m_type == zmq::SocketType::SUBSCRIBE)
             {
                 error =  zmq_setsockopt (m_socket, ZMQ_SUBSCRIBE,
                                      NULL, 0);
@@ -74,8 +75,7 @@ namespace internal
             return status;
         }
 
-
-        IMessage* receive()
+        const IMessage* receive()
         {
             //m_message
             Status status;
@@ -99,12 +99,17 @@ namespace internal
                 //return status;
                 return nullptr;
             }
-            std::cout << "After recv\n";
             void* data = zmq_msg_data(&msg);
             int size = zmq_msg_size(&msg);
+            const std::string str_message{static_cast<char*>(data), size};
+            std::cout << "After recv. Num of bytes - " << status.bytes_send << ". Message:" <<
+                    str_message << " \n";
 
             m_message->set_data(data);
             m_message->set_size(size);
+
+            //TODO: zmq_getsockopt (socket, ZMQ_RCVMORE, &more, &more_size);
+
 
             zmq_msg_close(&msg);
 
@@ -130,16 +135,17 @@ namespace internal
         {
             switch(m_type)
             {
-            case SocketType::PUB_SUB:
+            case SocketType::PUBLISH:
+                    return zmq_socket (m_context, ZMQ_PUB);
+            case SocketType::SUBSCRIBE:
                     return zmq_socket (m_context, ZMQ_SUB);
-            case SocketType::PUSH_PULL:
-                    return zmq_socket (m_context, ZMQ_PULL);
-            case SocketType::REQ_REPLY:
+            case SocketType::REQUEST:
                     return zmq_socket (m_context, ZMQ_REQ);
+            case SocketType::REPLY:
+                    return zmq_socket (m_context, ZMQ_REP);
             }
 
             assert(false && "Client: Incorrect type of socket specified");
-
         }
 
         void* m_context;
@@ -147,10 +153,8 @@ namespace internal
         SocketType m_type;
         IMessage* m_message;
 
-
-        //TODO: integrate within the session
+         //TODO: integrate within the session
         ISession m_session;
-
 
     };
 }//namespace internal
@@ -179,7 +183,7 @@ Status Client::send(const IMessage& message)
     return m_impl->send(message);
 }
 
-IMessage* Client::receive()
+const IMessage* Client::receive()
 {
     return m_impl->receive();
 }
