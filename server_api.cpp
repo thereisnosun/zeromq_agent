@@ -3,23 +3,27 @@
 
 #include <iostream>
 #include <cstring>
-
+#include <boost/asio.hpp>
 namespace zmq
 {
 
 namespace internal
 {
+
+//TODO: clean messages after sending !!!
     class ServerImpl
     {
     public:
-        ServerImpl(SocketType type)
+        ServerImpl(SocketType type):
+            m_rcv_strand{m_io}
         {
             m_ctx = zmq_ctx_new ();
             m_type = std::move(type);
             m_message = new SendMessage;
         }
 
-        ServerImpl(const ISession&)
+        ServerImpl(const ISession&):
+            m_rcv_strand{m_io}
         {
 
         }
@@ -84,7 +88,6 @@ namespace internal
             {
                 //TODO: handle
                 status.error = ErrorType::NOT_OK;
-                //return status;
                 return nullptr;
             }
 
@@ -96,7 +99,6 @@ namespace internal
                           << zmq_strerror(errno) << std::endl;
                 //TODO: handle
                 status.error  = ErrorType::NOT_OK;
-                //return status;
                 return nullptr;
             }
             void* data = zmq_msg_data(&msg);
@@ -114,8 +116,23 @@ namespace internal
         }
 
 
-        void async_receive(finish_send_cbk_type&& cbk)
+        //TODO: register for all messages or only for one ?
+        void async_receive(finish_receive_cbk_type&& cbk)
         {
+            zmq_pollitem_t wait_items[] = {
+                    { m_socket, 0, ZMQ_POLLIN, 0 }};
+
+            zmq_msg_t msg;
+            zmq_msg_init(&msg);
+
+            if (zmq_msg_recv(&msg, m_socket, ZMQ_DONTWAIT) < 0)
+            {
+                if (errno == EAGAIN)
+                {
+
+                }
+            }
+
         }
 
         const ISession& get_session() const
@@ -148,6 +165,12 @@ namespace internal
 
         SocketType m_type;
 
+        finish_receive_cbk_type m_rcv_cbk;
+
+
+        boost::asio::io_context m_io;
+        boost::asio::io_context::strand m_rcv_strand;
+
 
      //   SendMessage m_cur_message; //shitty implementation
 
@@ -179,7 +202,7 @@ const IMessage* Server::receive()
     return m_impl->receive();
 }
 
-void Server::async_receive(finish_send_cbk_type&& cbk)
+void Server::async_receive(finish_receive_cbk_type&& cbk)
 {
     m_impl->async_receive(std::move(cbk));
 }

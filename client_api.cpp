@@ -25,6 +25,8 @@ namespace internal
 
         }
 
+
+        //TODO: clean messages after sending !!!
         ~ClientImpl()
         {
             zmq_ctx_destroy(m_context);
@@ -85,7 +87,6 @@ namespace internal
             {
                 //TODO: handle
                 status.error = ErrorType::NOT_OK;
-                //return status;
                 return nullptr;
             }
 
@@ -93,11 +94,8 @@ namespace internal
             status.bytes_send = zmq_msg_recv(&msg, m_socket, 0);
             if (status.bytes_send < 0)
             {
-                std::cout << "Status bytes sent - " << status.bytes_send << ", error is "
-                          << zmq_strerror(errno) << std::endl;
                 //TODO: handle
                 status.error  = ErrorType::NOT_OK;
-                //return status;
                 return nullptr;
             }
             void* data = zmq_msg_data(&msg);
@@ -111,7 +109,6 @@ namespace internal
 
             //TODO: zmq_getsockopt (socket, ZMQ_RCVMORE, &more, &more_size);
 
-
             zmq_msg_close(&msg);
 
             return m_message;
@@ -124,6 +121,7 @@ namespace internal
 
         void async_send(const IMessage&, finish_send_cbk_type&& callback)
         {
+
 
         }
 

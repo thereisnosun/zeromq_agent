@@ -140,23 +140,18 @@ namespace zmq
     {
         Status():
             error{ErrorType::OK},
-            bytes_send{0}
+            bytes_send{0},
+            error_str{}
         {
         }
         ErrorType error;
         int bytes_send;
+        std::string error_str;
     };
 
     using result_type = std::future<Status>;
     using finish_send_cbk_type = std::function<void(Status)>;
-
-
-//    void message_fix(zmq_msg_t& msg, IMessage& message)
-//    {
-//        static const int MSG_SIZE = 8;
-
-//        std::memcpy(zmq_msg_data(&msg), message.get_data(), message.get_size());
-//    }
+    using finish_receive_cbk_type = std::function<void(SendMessage)>;
 
     //as we should use one context
     class ISession

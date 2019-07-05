@@ -5,11 +5,7 @@
 #include <iostream>
 #include <random>
 
-//const std::string UPDATE_TOKEN = "{'msg_type' : 'ipc', 'name': 'update_token', 'data': {'token': '<token>'}}";
-//const std::string UPDATE_TOKEN = "12345678{'msg_type' : 'ipc', 'name': 'update_token', 'data': {'token': '<token>'}}";
-//const std::string CLIP_REQUEST = "12345678{'msg_type' : 'ipc', 'name': 'clip_request', 'data': {'time': '<timestamp>'}}";
-//const std::string ADD_CAMERA = "12345678{'msg_type' : 'ipc', 'name': 'add_camera|edit_camera|delete_camera', "
-//                               "'data': <camera_json_info>}";
+//TODO: test with raw void* ptr
 
 const std::string UPDATE_TOKEN = "{'msg_type' : 'ipc', 'name': 'update_token', 'data': {'token': '<token>'}}";
 const std::string CLIP_REQUEST = "{'msg_type' : 'ipc', 'name': 'clip_request', 'data': {'time': '<timestamp>'}}";

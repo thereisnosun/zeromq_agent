@@ -5,6 +5,9 @@ project(test2)
 ## use this to globally use C++11 with in our project
 set(CMAKE_CXX_STANDARD 17)
 
+set(GCC_COVERAGE_COMPILE_FLAGS "-O1  -g3")
+set( CMAKE_CXX_FLAGS  "${CMAKE_CXX_FLAGS} ${GCC_COVERAGE_COMPILE_FLAGS}" )
+
 ## load in pkg-config support
 find_package(PkgConfig)
 
@@ -14,6 +17,12 @@ include_directories(${ZMQ_INCLUDE_DIRS})
 link_directories(${ZMQ_LIBRARY_DIRS})
 add_definitions(${ZMQ_CFLAGS_OTHER})
 set(LINKLIBS ${LINKLIBS} ${ZMQ_LIBRARIES})
+
+#Boost
+include_directories(${Boost_INCLUDE_DIR})
+find_package(Boost 1.68 COMPONENTS system REQUIRED)
+set(LINKLIBS ${LINKLIBS} ${Boost_LIBRARIES})
+
 
 add_executable(wuserver wuserver.c consts.h)
 target_include_directories(wuserver PUBLIC ${ZMQ_INCLUDE_DIRS})
@@ -35,7 +44,7 @@ add_executable(zeromq_agent zeromq_agent.cpp
     broker_api.cpp
     end_points.h)
 target_include_directories(zeromq_agent PUBLIC ${ZMQ_INCLUDE_DIRS})
-target_link_libraries(zeromq_agent PUBLIC ${LINKLIBS})
+target_link_libraries(zeromq_agent PUBLIC ${LINKLIBS} pthread )
 
 install(TARGETS wuserver DESTINATION /usr/bin COMPONENT binaries)
 install(TARGETS wuclient DESTINATION /usr/bin COMPONENT binaries)
