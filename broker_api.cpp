@@ -12,14 +12,10 @@ namespace internal
 //TODO: how to hanbdle errors?,
 //return - return codes ?
 
-
-
     class BrokerImpl final
     {
     public:
-        BrokerImpl(const std::string& backend, const std::string& frontend):
-            m_backend_end_point{backend},
-            m_frontend_end_point{frontend}
+        BrokerImpl()
         {//TODO: add error checking
              m_context = zmq_ctx_new ();
 
@@ -36,15 +32,15 @@ namespace internal
             zmq_ctx_destroy(m_context);
         }
 
-        ErrorType bind()
+        ErrorType bind(const std::string& backend, const std::string& frontend)
         {
-            int error = zmq_bind(m_frontend, m_frontend_end_point.c_str());
+            int error = zmq_bind(m_frontend, frontend.c_str());
             if (error != 0)
             {
                 return ErrorType::NOT_OK;
             }
 
-            error = zmq_bind(m_backend,  m_backend_end_point.c_str());
+            error = zmq_bind(m_backend,  backend.c_str());
             if (error != 0)
             {
                 return ErrorType::NOT_OK;
@@ -108,6 +104,8 @@ namespace internal
                 }
             }
 
+            //TODO: add some reply mechanism if a client stucked after the REQ
+
         }
     private:
         void* m_context;
@@ -115,16 +113,76 @@ namespace internal
         void* m_frontend;
         std::vector<Receiver> m_receivers;
 
-        std::string m_backend_end_point;
-        std::string m_frontend_end_point;
+    };
+
+    class BrokerPublisherImpl
+    {
+    public:
+        BrokerPublisherImpl()
+        {
+             m_context = zmq_ctx_new ();
+        }
+        ~BrokerPublisherImpl()
+        {
+            zmq_close(m_backend);
+            zmq_close(m_frontend);
+            zmq_ctx_destroy(m_context);
+        }
+
+        ErrorType bind(const std::string& backend, const std::string& frontend)
+        {
+            void* m_frontend = zmq_socket(m_context, ZMQ_XSUB);
+            if (!m_frontend)
+            {
+                //TODO: handle this shit!
+                return ErrorType::NOT_OK;
+            }
+
+            void* m_backend = zmq_socket(m_context, ZMQ_XPUB);
+            if (!m_backend)
+            {
+                //TODO: handle this shit;
+                return ErrorType::NOT_OK;
+            }
+
+            int error = zmq_connect(m_frontend, frontend.c_str());
+            if (error != 0)
+            {
+                //TODO: handle this shit
+                return ErrorType::NOT_OK;
+            }
+
+            error = zmq_bind(m_backend, backend.c_str());
+            if (error != 0)
+            {
+                //TODO: handle this shit
+                return ErrorType::NOT_OK;
+            }
+
+            return ErrorType::OK;
+        }
+
+
+        void start_loop()
+        {
+            int error = zmq_proxy(m_frontend, m_backend, NULL);
+            if (error != 0)
+            {
+                std::cout << "Error during proxy bind is - " << zmq_strerror(errno) << std::endl;
+            }
+        }
+    private:
+        void* m_context;
+        void* m_frontend;
+        void* m_backend;
     };
 
 } //internal
 
 
-Broker::Broker(const std::string& backend, const std::string& frontend)
+Broker::Broker()
 {
-    m_impl = std::make_unique<internal::BrokerImpl>(backend, frontend);
+    m_impl = std::make_unique<internal::BrokerImpl>();
 }
 
 Broker::~Broker() = default;
@@ -141,9 +199,9 @@ void Broker::unregister_receiver(const Receiver& receiver)
     m_impl->unregister_receiver(receiver);
 }
 
-void Broker::bind()
+void Broker::bind(const std::string& backend, const std::string& frontend)
 {
-    m_impl->bind();
+    m_impl->bind(backend, frontend);
 }
 
 
@@ -151,5 +209,26 @@ void Broker::start_loop()
 {
     m_impl->start_loop();
 }
+
+
+BrokerPublisher::BrokerPublisher()
+{
+    m_impl = std::make_unique<internal::BrokerPublisherImpl>();
+}
+
+BrokerPublisher::~BrokerPublisher() = default;
+
+ErrorType BrokerPublisher::bind(const std::string& backend, const std::string& frontend)
+{
+    return m_impl->bind(backend, frontend);
+}
+
+
+void BrokerPublisher::start_loop()
+{
+    m_impl->start_loop();
+}
+
+
 
 }//namespace zmq

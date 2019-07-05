@@ -66,6 +66,7 @@ namespace internal
 
         Status send(const IMessage& message)
         {
+
             Status status;
             status.bytes_send = zmq_send (m_socket, message.get_data(), message.get_size(), 0);
             if (status.bytes_send < 0)

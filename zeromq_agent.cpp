@@ -22,9 +22,9 @@ const std::string BACKEND_ENDPOINT = "tcp://*:5560";
 
 const char* end_point = "tcp://localhost:5559";
 const char* end_point_front_end = "tcp://localhost:5560";
-const char* end_point_server = "tcp://*:5557";
+const char* end_point_server = "tcp://*:5559";
 const int ITERATIONS_NUM = 100;
-const int SLEEP_MS = 10;
+const int SLEEP_MS = 100;
 
 const std::vector<std::string> messages{UPDATE_TOKEN, CLIP_REQUEST, ADD_CAMERA};
 
@@ -84,7 +84,7 @@ int req_rep_server(const std::string& end_point_server)
 }
 
 
-int pub_sub_client()
+int pub_sub_client(const std::string& end_point)
 {
     zmq::Client client{zmq::SocketType::SUBSCRIBE};
 
@@ -105,11 +105,11 @@ int pub_sub_client()
 
 }
 
-int pub_sub_server()
+int pub_sub_server(const std::string& end_point)
 {
     zmq::Server server{zmq::SocketType::PUBLISH};
 
-    if (server.bind(end_point_server) != zmq::ErrorType::OK)
+    if (server.bind(end_point) != zmq::ErrorType::OK)
     {
         std::cout << "Could not bind to server\n";
         return -1;
@@ -181,25 +181,36 @@ int main(int argc, char* argv[])
     {
         std::cout << "Starting socket client... \n";
         req_rep_client(end_point);
-//        pub_sub_client();
-
     }
     else if (std::string{argv[1]} == "server")
     {
         std::cout << "Starting socket server... \n";
         req_rep_server(end_point_server);
-//        pub_sub_server();
-
+    }
+    else if (std::string{argv[1]} == "client_pub")
+    {
+        std::cout << "Starting socket subscribe client... \n";
+        pub_sub_client(end_point);
+    }
+    else if (std::string{argv[1]} == "server_pub")
+    {
+        std::cout << "Starting socket publish server... \n";
+        pub_sub_server(end_point_server);
     }
     else if (std::string{argv[1]} == "broker")
     {
-        zmq::Broker broker{BACKEND_ENDPOINT, FRONTEND_ENDPOINT};
-        broker.bind();
+        zmq::Broker broker;
+        broker.bind(BACKEND_ENDPOINT, FRONTEND_ENDPOINT);
         broker.start_loop();
     }
     else if (std::string{argv[1]} == "worker")
     {
           req_rep_worker(end_point_front_end);
+    }
+    else if (std::string{argv[1]} == "broker_publish")
+    {
+        zmq::BrokerPublisher broker;
+        broker.bind(BACKEND_ENDPOINT, FRONTEND_ENDPOINT);
     }
 
 
