@@ -53,25 +53,14 @@ namespace internal
         Status publish(const IMessage &message)
         {
             Status status;
-            //status.bytes_send = zmq_send (m_socket, message.get_data(), message.get_size(), 0);
             zmq_msg_t msg;
-//            int error = zmq_msg_init_size (&msg, message.get_size());
-//            if (error != 0)
-//            {
-//                std::cout << "SHIT!\n";
-//                status.error = ErrorType::NOT_OK;
-//                return status;
-//            }
-
-            //std::memcpy(zmq_msg_data(&msg), message.get_data(), message.get_size());
-            //TODO: debug corrupted messages
-            zmq_msg_init_data (&msg, message.get_data(), message.get_size(), NULL, NULL);
-            void* data = zmq_msg_data(&msg);
-            int size = zmq_msg_size(&msg);
-            const std::string str_message{static_cast<char*>(data), size};
-
-            std::cout << "Server before message is sent:" <<
-                    str_message << " \n";
+            int error = zmq_msg_init_data (&msg, message.get_data(), message.get_size(), NULL, NULL);
+            if (error != 0)
+            {
+                std::cout << "SHIT!\n";
+                status.error = ErrorType::NOT_OK;
+                return status;
+            }
             status.bytes_send = zmq_msg_send (&msg, m_socket, 0);
 
             if (status.bytes_send < 0)

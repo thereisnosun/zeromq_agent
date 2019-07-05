@@ -212,6 +212,11 @@ int main(int argc, char* argv[])
         zmq::BrokerPublisher broker;
         broker.bind(BACKEND_ENDPOINT, FRONTEND_ENDPOINT);
     }
+    else
+    {
+        std::cout << "You've specified wrong mode, bitch.\n";
+        return -1;
+    }
 
 
     return 0;

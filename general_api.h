@@ -1,6 +1,7 @@
 #pragma once
 #include <future>
 #include <functional>
+#include <cstring>
 
 #include "czmq.h"
 
@@ -44,13 +45,25 @@ namespace zmq
     class SendMessage: public IMessage
     {
     public:
-        SendMessage(std::string message):
-            m_data(static_cast<void*>(message.data())),
+        SendMessage(const std::string& message):
             m_size{message.size()}
-        {}
+        {
+             m_data = new char[m_size + 1];
+             std::memset(m_data, 0x00, m_size);
+             std::memcpy(m_data, message.data(), m_size);
+             m_is_allocated = true;
+        }
+        ~SendMessage()
+        {
+            if (m_is_allocated)
+                delete[] m_data;
+        }
+
+        /* It is caller's reponsibility to free the buffer, when using this constructor */
         SendMessage(void* start_ptr, int size):
             m_data{start_ptr},
-            m_size{size}
+            m_size{size},
+            m_is_allocated{false}
         {
         }
         SendMessage():
@@ -98,6 +111,7 @@ namespace zmq
     private:
         int m_size;
         void* m_data;
+        bool m_is_allocated;
     };
 
 
