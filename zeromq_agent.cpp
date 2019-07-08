@@ -171,10 +171,11 @@ int pub_sub_client_async(const std::string& end_point)
             const std::string str_message{static_cast<char*>(message.get_data()), message.get_size()};
             std::cout << "Received a message from client: \n" << str_message << std::endl;
         });
+        std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP_MS));
         std::cout << "Waiting for the previous message\n";
     }
     std::cout << "Press a key\n";
-    getchar();
+    //getchar();
     std::cout << "End of function\n";
 
 }

@@ -21,7 +21,10 @@ namespace internal
             m_ctx = zmq_ctx_new ();
             m_type = std::move(type);
             m_message = new SendMessage;
-            auto work = std::make_shared<boost::asio::io_service::work>( m_io );
+            m_worker = std::thread{[this]() {
+                auto work = std::make_shared<boost::asio::io_service::work>( m_io );
+                m_io.run();
+            }};
         }
 
         ServerImpl(const ISession&):
@@ -32,11 +35,17 @@ namespace internal
         }
         ~ServerImpl()
         {
-            zmq_ctx_destroy(m_ctx);
-            zmq_close(m_socket);
-            delete m_message;
             if (m_running)
                 m_io.stop();
+
+            if (m_worker.joinable())
+                m_worker.join();
+
+            zmq_close(m_socket);
+            zmq_ctx_destroy(m_ctx);
+
+            delete m_message;
+
 
         }
 
@@ -132,12 +141,6 @@ namespace internal
         //TODO: register for all messages or only for one ?
         void async_receive(finish_receive_cbk_type&& cbk)
         {
-            if (!m_running)
-            {
-                m_io.run();
-                m_running = true;
-            }
-
             m_rcv_strand.post([this, &cbk]()
             {
                 zmq_pollitem_t wait_items[] = {
@@ -169,12 +172,6 @@ namespace internal
 
         void async_publish(const IMessage& message, finish_send_cbk_type&& cbk)
         {
-            if (!m_running)
-            {
-                m_io.run();
-                m_running = true;
-            }
-
              m_rcv_strand.post([this, &message, &cbk]()
              {
                 Status status = publish_worker(message, ZMQ_NOBLOCK);
@@ -217,6 +214,7 @@ namespace internal
 
         boost::asio::io_context m_io;
         boost::asio::io_context::strand m_rcv_strand;
+        std::thread m_worker;
         bool m_running;
 
 
