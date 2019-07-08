@@ -139,10 +139,6 @@ int req_rep_worker(const std::string& end_point)
         return -1;
     }
 
-    std::random_device dev;
-    std::mt19937 rng(dev());
-    std::uniform_int_distribution<std::mt19937::result_type> dist(0, 2);
-
     for(int i = 0; i < ITERATIONS_NUM; ++i)
     {
         const zmq::IMessage * message = client.receive();
@@ -166,12 +162,6 @@ int main(int argc, char* argv[])
         std::cout << "Specify mode, bitch! \n";
         return -1;
     }
-
-    for(const std::string& str : messages)
-    {
-        std::cout << str.size() << std::endl;
-    }
-
 
     if (std::string{argv[1]} == "client")
     {

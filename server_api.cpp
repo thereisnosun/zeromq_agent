@@ -15,7 +15,8 @@ namespace internal
     {
     public:
         ServerImpl(SocketType type):
-            m_rcv_strand{m_io}
+            m_rcv_strand{m_io},
+            m_running{false}
         {
             m_ctx = zmq_ctx_new ();
             m_type = std::move(type);
@@ -23,7 +24,8 @@ namespace internal
         }
 
         ServerImpl(const ISession&):
-            m_rcv_strand{m_io}
+            m_rcv_strand{m_io},
+            m_running{false}
         {
 
         }
@@ -32,6 +34,9 @@ namespace internal
             zmq_ctx_destroy(m_ctx);
             zmq_close(m_socket);
             delete m_message;
+            if (m_running)
+                m_io.stop();
+
         }
 
         ErrorType bind(const std::string& url)
@@ -54,7 +59,13 @@ namespace internal
             return ErrorType::OK;
         }
 
+
         Status publish(const IMessage &message)
+        {
+            return publish_worker(message, 0);
+        }
+
+        Status publish_worker(const IMessage &message, int flags)
         {
             Status status;
             zmq_msg_t msg;
@@ -65,7 +76,7 @@ namespace internal
                 status.error = ErrorType::NOT_OK;
                 return status;
             }
-            status.bytes_send = zmq_msg_send (&msg, m_socket, 0);
+            status.bytes_send = zmq_msg_send (&msg, m_socket, flags);
 
             if (status.bytes_send < 0)
             {
@@ -81,6 +92,8 @@ namespace internal
                 std::cout << "NOT IMPLEMENTED FOR PUB_SUB";
                 return nullptr;
             }
+
+
             //TODO: handle multipart messages as well
             Status status;
             zmq_msg_t msg;
@@ -115,24 +128,57 @@ namespace internal
             return m_message;
         }
 
-
         //TODO: register for all messages or only for one ?
         void async_receive(finish_receive_cbk_type&& cbk)
         {
-            zmq_pollitem_t wait_items[] = {
-                    { m_socket, 0, ZMQ_POLLIN, 0 }};
-
-            zmq_msg_t msg;
-            zmq_msg_init(&msg);
-
-            if (zmq_msg_recv(&msg, m_socket, ZMQ_DONTWAIT) < 0)
+            if (!m_running)
             {
-                if (errno == EAGAIN)
-                {
-
-                }
+                m_io.run();
+                m_running = true;
             }
 
+            m_rcv_strand.post([this, &cbk]()
+            {
+                zmq_pollitem_t wait_items[] = {
+                        { m_socket, 0, ZMQ_POLLIN, 0 }};
+
+                zmq_msg_t msg;
+                zmq_msg_init(&msg);
+
+
+                zmq_poll (wait_items, 1, -1);
+                if (wait_items [0].revents & ZMQ_POLLIN)
+                {
+                    if (zmq_msg_recv(&msg, m_socket, ZMQ_DONTWAIT) < 0)
+                    {
+                        if (errno == EAGAIN)
+                        {
+                            std::cout << "Wait again\n";
+                        }
+                    }
+                    else
+                    {
+                        SendMessage message{zmq_msg_data(&msg), zmq_msg_size(&msg)};
+                        cbk(message);
+                        zmq_msg_close(&msg);
+                    }
+                }
+            });
+        }
+
+        void async_publish(const IMessage& message, finish_send_cbk_type&& cbk)
+        {
+            if (!m_running)
+            {
+                m_io.run();
+                m_running = true;
+            }
+
+             m_rcv_strand.post([this, &message, &cbk]()
+             {
+                Status status = publish_worker(message, ZMQ_NOBLOCK);
+                cbk(status);
+             });
         }
 
         const ISession& get_session() const
@@ -170,6 +216,7 @@ namespace internal
 
         boost::asio::io_context m_io;
         boost::asio::io_context::strand m_rcv_strand;
+        bool m_running;
 
 
      //   SendMessage m_cur_message; //shitty implementation
@@ -215,6 +262,11 @@ const ISession& Server::get_session() const
 Status Server::publish(const IMessage& message)
 {
     return m_impl->publish(message);
+}
+
+void Server::async_publish(const IMessage& message, finish_send_cbk_type&& cbk)
+{
+    return m_impl->async_publish(message, std::move(cbk));
 }
 
 

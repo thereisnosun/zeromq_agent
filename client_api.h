@@ -36,6 +36,9 @@ namespace zmq
         /* Will return immediatly. Call the callback on the completion*/
         void async_send(const IMessage&, finish_send_cbk_type&& callback);
 
+        /* Will return immediatly. Call the callback on the completion*/
+        void async_receive(finish_receive_cbk_type&& cbk);
+
         /* Retrieve session*/
         const ISession& get_session() const;
     private:

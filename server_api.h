@@ -35,6 +35,9 @@ namespace zmq
         /* return the bytes send, if failed return -1. Blocking call.*/
         Status publish(const IMessage& );
 
+        /* return the bytes send, if failed return -1. When sent cbk will be called*/
+        void async_publish(const IMessage& message, finish_send_cbk_type&& cbk);
+
         /* Retrieve session*/
         const ISession& get_session() const;
     private:
