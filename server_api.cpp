@@ -21,6 +21,7 @@ namespace internal
             m_ctx = zmq_ctx_new ();
             m_type = std::move(type);
             m_message = new SendMessage;
+            auto work = std::make_shared<boost::asio::io_service::work>( m_io );
         }
 
         ServerImpl(const ISession&):

@@ -154,6 +154,32 @@ int req_rep_worker(const std::string& end_point)
     }
 }
 
+int pub_sub_client_async(const std::string& end_point)
+{
+    zmq::Client client{zmq::SocketType::SUBSCRIBE};
+
+    if (client.connect(end_point) != zmq::ErrorType::OK)
+    {
+        std::cout << "Coud not connect from client\n";
+        return -1;
+    }
+
+    for(int i = 0; i < ITERATIONS_NUM; ++i)
+    {
+        client.async_receive([](zmq::IMessage& message) -> void
+        {
+            const std::string str_message{static_cast<char*>(message.get_data()), message.get_size()};
+            std::cout << "Received a message from client: \n" << str_message << std::endl;
+        });
+        std::cout << "Waiting for the previous message\n";
+    }
+    std::cout << "Press a key\n";
+    getchar();
+    std::cout << "End of function\n";
+
+}
+
+
 
 int main(int argc, char* argv[])
 {
@@ -185,18 +211,26 @@ int main(int argc, char* argv[])
     }
     else if (std::string{argv[1]} == "broker")
     {
+        std::cout << "Starting broker REQ - REP...\n";
         zmq::Broker broker;
         broker.bind(BACKEND_ENDPOINT, FRONTEND_ENDPOINT);
         broker.start_loop();
     }
     else if (std::string{argv[1]} == "worker")
     {
-          req_rep_worker(end_point_front_end);
+        std::cout << "Starting worker...\n";
+        req_rep_worker(end_point_front_end);
     }
     else if (std::string{argv[1]} == "broker_publish")
     {
+        std::cout << "Starting broker PUB - SUB...\n";
         zmq::BrokerPublisher broker;
         broker.bind(BACKEND_ENDPOINT, FRONTEND_ENDPOINT);
+    }
+    else if (std::string{argv[1]} == "client_pub_async")
+    {
+        std::cout << "Starting async subscribe client...\n";
+        pub_sub_client_async(end_point);
     }
     else
     {
@@ -205,5 +239,6 @@ int main(int argc, char* argv[])
     }
 
 
+    std::cout << "Normal program exit\n";
     return 0;
 }

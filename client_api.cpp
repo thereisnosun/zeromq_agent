@@ -5,6 +5,7 @@
 #include "czmq.h"
 #include <iostream>
 #include <boost/asio.hpp>
+#include <thread>
 
 namespace zmq
 {
@@ -21,6 +22,13 @@ namespace internal
             m_context = zmq_ctx_new ();
             m_type = std::move(type);
             m_message = new SendMessage;
+
+            m_worker = std::thread{[this]() -> void
+            {
+                    auto work = std::make_shared<boost::asio::io_service::work>( m_io );
+                    std::cout << "Strating the main loop...\n";
+                    m_io.run();
+            }};
         }
 
         ClientImpl(const ISession& session):
@@ -34,14 +42,19 @@ namespace internal
         //TODO: clean messages after sending !!!
         ~ClientImpl()
         {
-            zmq_ctx_destroy(m_context);
-            zmq_close(m_socket);
-            delete m_message;
-
+            std::cout << "Before destroy:\n";
             if (m_running)
             {
                 m_io.stop();
             }
+            if (m_worker.joinable())
+                m_worker.join();
+            zmq_close(m_socket);
+            zmq_ctx_destroy(m_context);
+            delete m_message;
+            std::cout << "Before this shit:\n";
+
+            std::cout << "Exiting from destructor...\n";
         }
 
         ErrorType connect(const std::string& url)
@@ -130,11 +143,11 @@ namespace internal
 
         void async_send(const IMessage& message, finish_send_cbk_type&& cbk)
         {
-            if (!m_running)
-            {
-                m_io.run();
-                m_running = true;
-            }
+//            if (!m_running)
+//            {
+//                m_io.run();
+//                m_running = true;
+//            }
 
             m_rcv_strand.post([this, &message, &cbk]()
             {
@@ -147,14 +160,17 @@ namespace internal
 
         void async_receive(finish_receive_cbk_type&& cbk)
         {
-            if (!m_running)
-            {
-                m_io.run();
-                m_running = true;
-            }
+//            if (!m_running)
+//            {
+//                m_io.run();
+//                m_running = true;
+//            }
 
+
+            std::cout << "async_receive\n";
             m_rcv_strand.post([this, &cbk]()
             {
+                std::cout << "Entered strand\n";
                 zmq_pollitem_t wait_items[] = {
                         { m_socket, 0, ZMQ_POLLIN, 0 }};
 
@@ -165,8 +181,10 @@ namespace internal
                 zmq_poll (wait_items, 1, -1);
                 if (wait_items [0].revents & ZMQ_POLLIN)
                 {
+                    std::cout << "Before recieve\n";
                     if (zmq_msg_recv(&msg, m_socket, ZMQ_DONTWAIT) < 0)
                     {
+                        std::cout << "receive failed\n";
                         if (errno == EAGAIN)
                         {
                             std::cout << "Wait again\n";
@@ -213,6 +231,7 @@ namespace internal
         boost::asio::io_context m_io;
         boost::asio::io_context::strand m_rcv_strand;
         bool m_running;
+        std::thread m_worker;
 
          //TODO: integrate within the session
         ISession m_session;

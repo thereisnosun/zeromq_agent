@@ -151,7 +151,7 @@ namespace zmq
 
     using result_type = std::future<Status>;
     using finish_send_cbk_type = std::function<void(Status)>;
-    using finish_receive_cbk_type = std::function<void(SendMessage)>;
+    using finish_receive_cbk_type = std::function<void(IMessage&)>;
 
     //as we should use one context
     class ISession
