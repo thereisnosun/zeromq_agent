@@ -27,7 +27,8 @@ namespace internal
             {
                 auto work = std::make_shared<boost::asio::io_service::work>( m_io );
                 m_running = true;
-                std::cout << "Strating the main loop...\n";
+                std::cout << "Strating"
+                             " the main loop...\n";
                 m_io.run();
             }};
         }
@@ -38,7 +39,6 @@ namespace internal
         {
 
         }
-
 
         //TODO: clean messages after sending !!!
         ~ClientImpl()
@@ -144,7 +144,6 @@ namespace internal
             m_message->set_data(data);
             m_message->set_size(size);
 
-            //TODO: zmq_getsockopt (socket, ZMQ_RCVMORE, &more, &more_size);
 
             zmq_msg_close(&msg);
 

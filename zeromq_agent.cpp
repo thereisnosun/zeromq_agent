@@ -248,6 +248,8 @@ int req_rep_server_async(const std::string& end_point_server)
         });
         std::cout << "Iteration " << i << " is finished\n";
     }
+    std::cout << "Enter a character...\n";
+    getchar();
     return 0;
 }
 

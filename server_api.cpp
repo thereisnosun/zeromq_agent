@@ -22,9 +22,10 @@ namespace internal
             m_type = std::move(type);
             m_message = new SendMessage;
             m_worker = std::thread{[this]() {
+                m_running = true;
                 auto work = std::make_shared<boost::asio::io_service::work>( m_io );
                 m_io.run();
-                m_running = true;
+
             }};
         }
 
@@ -34,6 +35,7 @@ namespace internal
         {
 
         }
+
         ~ServerImpl()
         {
             if (m_running)
@@ -80,6 +82,9 @@ namespace internal
         {
             Status status;
             zmq_msg_t msg;
+            const std::string str_message{static_cast<char*>(message.get_data()), message.get_size()};
+            std::cout << "publish_worker - " << str_message << std::endl;
+
             int error = zmq_msg_init_data (&msg, message.get_data(), message.get_size(), NULL, NULL);
             if (error != 0)
             {
