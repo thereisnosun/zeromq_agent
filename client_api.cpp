@@ -26,6 +26,7 @@ namespace internal
             m_worker = std::thread{[this]() -> void
             {
                 auto work = std::make_shared<boost::asio::io_service::work>( m_io );
+                m_running = true;
                 std::cout << "Strating the main loop...\n";
                 m_io.run();
             }};
@@ -91,8 +92,22 @@ namespace internal
 
         Status send(const IMessage& message)
         {
+            return send_worker(message, 0);
+        }
+
+        Status send_worker(const IMessage& message, int flags)
+        {
             Status status;
-            status.bytes_send = zmq_send (m_socket, message.get_data(), message.get_size(), 0);
+            zmq_msg_t msg;
+            int error = zmq_msg_init_data (&msg, message.get_data(), message.get_size(), NULL, NULL);
+            if (error != 0)
+            {
+                std::cout << "SHIT!\n";
+                status.error = ErrorType::NOT_OK;
+                return status;
+            }
+            status.bytes_send = zmq_msg_send (&msg, m_socket, flags);
+
             if (status.bytes_send < 0)
             {
                 status.error = ErrorType::NOT_OK;
@@ -145,11 +160,9 @@ namespace internal
         {
             m_rcv_strand.post([this, &message, &cbk]()
             {
-//               Status status = publish_worker(message, ZMQ_NOBLOCK);
-//               cbk(status);
+               Status status = send_worker(message, ZMQ_NOBLOCK);
+               cbk(status);
             });
-
-
         }
 
         void async_receive(finish_receive_cbk_type&& cbk)

@@ -53,6 +53,7 @@ int req_rep_client(const std::string& end_point)
         const std::string str_message{static_cast<char*>(message->get_data()), message->get_size()};
         std::cout << "Received a response from server: \n" << str_message << std::endl;
     }
+    return 0;
 }
 
 int req_rep_server(const std::string& end_point_server)
@@ -77,6 +78,7 @@ int req_rep_server(const std::string& end_point_server)
         zmq::SendMessage send_message{REPLY};
         server.publish(send_message);
     }
+    return 0;
 }
 
 
@@ -98,6 +100,7 @@ int pub_sub_client(const std::string& end_point)
         const std::string str_message{static_cast<char*>(message->get_data()), message->get_size()};
         std::cout << "Received a message from client: \n" << str_message << std::endl;
     }
+    return 0;
 
 }
 
@@ -125,6 +128,7 @@ int pub_sub_server(const std::string& end_point)
         server.publish(zmq_message);
         std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP_MS));
     }
+    return 0;
 }
 
 
@@ -152,6 +156,7 @@ int req_rep_worker(const std::string& end_point)
         client.send(send_message);
         std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP_MS));
     }
+    return 0;
 }
 
 int pub_sub_client_async(const std::string& end_point)
@@ -177,7 +182,73 @@ int pub_sub_client_async(const std::string& end_point)
     std::cout << "Press a key\n";
     //getchar();
     std::cout << "End of function\n";
+    return 0;
+}
 
+
+
+int req_rep_client_async(const std::string& end_point)
+{
+    zmq::Client client{zmq::SocketType::REQUEST};
+
+    if (client.connect(end_point) != zmq::ErrorType::OK)
+    {
+        std::cout << "Coud not connect from client\n";
+        return -1;
+    }
+
+    std::random_device dev;
+    std::mt19937 rng(dev());
+    std::uniform_int_distribution<std::mt19937::result_type> dist(0, 2);
+
+    for(int i = 0; i < ITERATIONS_NUM; ++i)
+    {
+        const int index = dist(rng);
+        const std::string& message_to_send = messages[index];
+        std::cout << "Sending message: \n" << message_to_send << "\n";
+        zmq::SendMessage zmq_message{message_to_send};
+        client.async_send(zmq_message, [&client] (zmq::Status status) -> void {
+            const zmq::IMessage * message = client.receive();
+            if (!message)
+            {
+                std::cout << "Failed to receive stuff\n";
+                return;
+            }
+
+            const std::string str_message{static_cast<char*>(message->get_data()), message->get_size()};
+            std::cout << "Received a response from server: \n" << str_message << std::endl;
+        });
+        std::this_thread::sleep_for(std::chrono::milliseconds(SLEEP_MS));
+        std::cout << "Iteration " << i << " is finished\n";
+    }
+    return 0;
+}
+
+
+int req_rep_server_async(const std::string& end_point_server)
+{
+    zmq::Server server{zmq::SocketType::REPLY};
+    const std::string REPLY = "{'status' : 'ok'}";
+
+    if (server.bind(end_point_server) != zmq::ErrorType::OK)
+    {
+        std::cout << "Could not bind a server\n";
+        return -1;
+    }
+
+    for (int i = 0; i < ITERATIONS_NUM; ++i)
+    {
+        server.async_receive([&server, &REPLY](zmq::IMessage& message)
+        {
+            const std::string str_message{static_cast<char*>(message.get_data()), message.get_size()};
+            std::cout << "Received a message from client: \n" << str_message << std::endl;
+
+            zmq::SendMessage send_message{REPLY};
+            server.publish(send_message);
+        });
+        std::cout << "Iteration " << i << " is finished\n";
+    }
+    return 0;
 }
 
 
@@ -233,12 +304,21 @@ int main(int argc, char* argv[])
         std::cout << "Starting async subscribe client...\n";
         pub_sub_client_async(end_point);
     }
+    else if (std::string{argv[1]} == "client_req_async")
+    {
+        std::cout << "Starting async REQ_REP client...\n";
+        req_rep_client_async(end_point);
+    }
+    else if (std::string{argv[1]} == "server_req_async")
+    {
+        std::cout << "Starting async REQ_REP server\n";
+        req_rep_server_async(end_point_server);
+    }
     else
     {
         std::cout << "You've specified wrong mode, bitch.\n";
         return -1;
     }
-
 
     std::cout << "Normal program exit\n";
     return 0;

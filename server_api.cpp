@@ -24,6 +24,7 @@ namespace internal
             m_worker = std::thread{[this]() {
                 auto work = std::make_shared<boost::asio::io_service::work>( m_io );
                 m_io.run();
+                m_running = true;
             }};
         }
 
@@ -211,15 +212,10 @@ namespace internal
 
         finish_receive_cbk_type m_rcv_cbk;
 
-
         boost::asio::io_context m_io;
         boost::asio::io_context::strand m_rcv_strand;
         std::thread m_worker;
         bool m_running;
-
-
-     //   SendMessage m_cur_message; //shitty implementation
-
     };
 } //namespace internal
 
