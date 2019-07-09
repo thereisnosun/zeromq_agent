@@ -18,10 +18,6 @@ namespace internal
         BrokerImpl()
         {//TODO: add error checking
              m_context = zmq_ctx_new ();
-
-             m_frontend = zmq_socket(m_context, ZMQ_ROUTER);
-             m_backend = zmq_socket(m_context, ZMQ_DEALER);
-
              m_receivers.reserve(16);
         }
 
@@ -34,6 +30,20 @@ namespace internal
 
         ErrorType bind(const std::string& backend, const std::string& frontend)
         {
+            m_frontend = zmq_socket(m_context, ZMQ_ROUTER);
+            if (!m_frontend)
+            {
+                m_str_error = zmq_strerror(errno);
+                return ErrorType::NOT_OK;
+            }
+
+            m_backend = zmq_socket(m_context, ZMQ_DEALER);
+            if (!m_backend)
+            {
+                m_str_error = zmq_strerror(errno);
+                return ErrorType::NOT_OK;
+            }
+
             int error = zmq_bind(m_frontend, frontend.c_str());
             if (error != 0)
             {
