@@ -40,6 +40,8 @@ namespace zmq
 
         /* Retrieve session*/
         const ISession& get_session() const;
+
+        std::string get_str_error() const;
     private:
         std::unique_ptr<internal::ServerImpl> m_impl;
     };

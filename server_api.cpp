@@ -11,7 +11,7 @@ namespace internal
 {
 
 //TODO: clean messages after sending !!!
-    class ServerImpl
+    class ServerImpl final
     {
     public:
         ServerImpl(SocketType type):
@@ -21,7 +21,8 @@ namespace internal
             m_ctx = zmq_ctx_new ();
             m_type = std::move(type);
             m_message = new SendMessage;
-            m_worker = std::thread{[this]() {
+            m_worker = std::thread{[this]()
+            {
                 m_running = true;
                 auto work = std::make_shared<boost::asio::io_service::work>( m_io );
                 m_io.run();
@@ -33,7 +34,7 @@ namespace internal
             m_rcv_strand{m_io},
             m_running{false}
         {
-
+            assert(false && "NOT yet implemented");
         }
 
         ~ServerImpl()
@@ -58,6 +59,7 @@ namespace internal
             if (!m_socket)
             {
                 std::cout << "Could not create a socket" << errno << std::endl;
+                m_str_error = zmq_strerror(errno);
                 return ErrorType::NOT_OK;
             }
 
@@ -65,7 +67,7 @@ namespace internal
             if (error != 0)
             {
                 std::cout << "ServerImpl: Error is - " << errno << " error:" << zmq_strerror(errno) << std::endl;
-                //TODO: handle shit
+                m_str_error = zmq_strerror(errno);
                 return ErrorType::NOT_OK;
             }
 
@@ -90,6 +92,7 @@ namespace internal
             {
                 std::cout << "SHIT!\n";
                 status.error = ErrorType::NOT_OK;
+                m_str_error = zmq_strerror(errno);
                 return status;
             }
             status.bytes_send = zmq_msg_send (&msg, m_socket, flags);
@@ -97,7 +100,7 @@ namespace internal
             std::cout << "Bytes sent - " << status.bytes_send << std::endl;
             if (status.bytes_send < 0)
             {
-
+                m_str_error = zmq_strerror(errno);
                 status.error = ErrorType::NOT_OK;
             }
             zmq_msg_close(&msg);
@@ -112,13 +115,13 @@ namespace internal
                 return nullptr;
             }
 
-
             //TODO: handle multipart messages as well
             Status status;
             zmq_msg_t msg;
             if (zmq_msg_init (&msg) != 0)
             {
-                //TODO: handle
+                m_str_error = zmq_strerror(errno);
+                status.error_str = m_str_error;
                 status.error = ErrorType::NOT_OK;
                 return nullptr;
             }
@@ -129,7 +132,8 @@ namespace internal
             {
                 std::cout << "Status bytes sent - " << status.bytes_send << ", error is "
                           << zmq_strerror(errno) << std::endl;
-                //TODO: handle
+                m_str_error = zmq_strerror(errno);
+                status.error_str = m_str_error;
                 status.error  = ErrorType::NOT_OK;
                 return nullptr;
             }
@@ -168,6 +172,10 @@ namespace internal
                         {
                             std::cout << "Wait again\n";
                         }
+                        else
+                        {
+                            m_str_error = zmq_strerror(errno);
+                        }
                     }
                     else
                     {
@@ -190,7 +198,14 @@ namespace internal
 
         const ISession& get_session() const
         {
+            assert(false && "NOT yet implemented");
             return m_session;
+        }
+
+
+        std::string get_str_error() const
+        {
+            return m_str_error;
         }
     private:
         void* create_socket()
@@ -224,6 +239,7 @@ namespace internal
         boost::asio::io_context::strand m_rcv_strand;
         std::thread m_worker;
         bool m_running;
+        std::string m_str_error;
     };
 } //namespace internal
 
@@ -237,10 +253,8 @@ Server::Server(const ISession& session)
  //TODO: restore from the session
 }
 
-Server::~Server()
-{
+Server::~Server() = default;
 
-}
 
 ErrorType Server::bind(const std::string& url)
 {
@@ -270,6 +284,11 @@ Status Server::publish(const IMessage& message)
 void Server::async_publish(const IMessage& message, finish_send_cbk_type&& cbk)
 {
     return m_impl->async_publish(message, std::move(cbk));
+}
+
+std::string Server::get_str_error() const
+{
+    return m_impl->get_str_error();
 }
 
 

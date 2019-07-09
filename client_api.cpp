@@ -27,7 +27,7 @@ namespace internal
             {
                 auto work = std::make_shared<boost::asio::io_service::work>( m_io );
                 m_running = true;
-                std::cout << "Strating"
+                std::cout << "Starting"
                              " the main loop...\n";
                 m_io.run();
             }};
@@ -37,10 +37,9 @@ namespace internal
             m_rcv_strand{m_io},
             m_running{false}
         {
-
+            assert(false && "NOT yet implemented");
         }
 
-        //TODO: clean messages after sending !!!
         ~ClientImpl()
         {
             std::cout << "Before destroy:\n";
@@ -53,8 +52,6 @@ namespace internal
             zmq_close(m_socket);
             zmq_ctx_destroy(m_context);
             delete m_message;
-            std::cout << "Before this shit:\n";
-
             std::cout << "Exiting from destructor...\n";
         }
 
@@ -64,7 +61,7 @@ namespace internal
             if (!m_socket)
             {
                 std::cout << "ClientImpl Could not create a socket is - " << errno << std::endl;
-                //TODO: HANDLE
+                m_str_error = zmq_strerror(errno);
                 return ErrorType::NOT_OK;
             }
 
@@ -72,7 +69,7 @@ namespace internal
             if (error != 0)
             {
                 std::cout << "ClientImpl: Error is - " << errno << std::endl;
-                //TODO: handle
+                m_str_error = zmq_strerror(errno);
                 return ErrorType::NOT_OK;
             }
 
@@ -82,6 +79,7 @@ namespace internal
                                      NULL, 0);
                 if (error != 0)
                 {
+                    m_str_error = zmq_strerror(errno);
                     return ErrorType::NOT_OK;
                 }
 
@@ -102,7 +100,8 @@ namespace internal
             int error = zmq_msg_init_data (&msg, message.get_data(), message.get_size(), NULL, NULL);
             if (error != 0)
             {
-                std::cout << "SHIT!\n";
+                m_str_error = zmq_strerror(errno);
+                status.error_str = m_str_error;
                 status.error = ErrorType::NOT_OK;
                 return status;
             }
@@ -110,6 +109,8 @@ namespace internal
 
             if (status.bytes_send < 0)
             {
+                m_str_error = zmq_strerror(errno);
+                status.error_str = m_str_error;
                 status.error = ErrorType::NOT_OK;
             }
             zmq_msg_close(&msg);
@@ -118,12 +119,12 @@ namespace internal
 
         const IMessage* receive()
         {
-            //m_message
             Status status;
             zmq_msg_t msg;
             if (zmq_msg_init (&msg) != 0)
             {
-                //TODO: handle
+                m_str_error = zmq_strerror(errno);
+                status.error_str = m_str_error;
                 status.error = ErrorType::NOT_OK;
                 return nullptr;
             }
@@ -132,7 +133,8 @@ namespace internal
             status.bytes_send = zmq_msg_recv(&msg, m_socket, 0);
             if (status.bytes_send < 0)
             {
-                //TODO: handle
+                m_str_error = zmq_strerror(errno);
+                status.error_str = m_str_error;
                 status.error  = ErrorType::NOT_OK;
                 return nullptr;
             }
@@ -153,6 +155,7 @@ namespace internal
 
         result_type async_send(const IMessage& message)
         {
+            assert(false && "NOT yet implemented");
             return result_type{};
         }
 
@@ -167,10 +170,8 @@ namespace internal
 
         void async_receive(finish_receive_cbk_type&& cbk)
         {
-            std::cout << "async_receive\n";
             m_rcv_strand.post([this, &cbk]()
             {
-                std::cout << "Entered strand\n";
                 zmq_pollitem_t wait_items[] = {
                         { m_socket, 0, ZMQ_POLLIN, 0 }};
 
@@ -181,13 +182,16 @@ namespace internal
                 zmq_poll (wait_items, 1, -1);
                 if (wait_items [0].revents & ZMQ_POLLIN)
                 {
-                    std::cout << "Before recieve\n";
+
                     if (zmq_msg_recv(&msg, m_socket, ZMQ_DONTWAIT) < 0)
                     {
-                        std::cout << "receive failed\n";
                         if (errno == EAGAIN)
                         {
                             std::cout << "Wait again\n";
+                        }
+                        else
+                        {
+                            m_str_error = zmq_strerror(errno);
                         }
                     }
                     else
@@ -203,7 +207,13 @@ namespace internal
 
         const ISession& get_session() const
         {
+            assert(false && "NOT yet implemented");
             return m_session;
+        }
+
+        std::string get_str_error() const
+        {
+            return m_str_error;
         }
        private:
         void* create_socket()
@@ -232,6 +242,7 @@ namespace internal
         boost::asio::io_context::strand m_rcv_strand;
         bool m_running;
         std::thread m_worker;
+        std::string m_str_error;
 
          //TODO: integrate within the session
         ISession m_session;
@@ -287,6 +298,11 @@ void Client::async_receive(finish_receive_cbk_type&& cbk)
 const ISession& Client::get_session() const
 {
     return m_impl->get_session();
+}
+
+std::string Client::get_str_error() const
+{
+    return m_impl->get_str_error();
 }
 
 }//namespace zmq

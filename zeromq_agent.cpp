@@ -12,7 +12,8 @@ const std::string CLIP_REQUEST = "{'msg_type' : 'ipc', 'name': 'clip_request', '
 const std::string ADD_CAMERA = "{'msg_type' : 'ipc', 'name': 'add_camera|edit_camera|delete_camera', "
                                "'data': <camera_json_info>}";
 
-const std::string REPLY = "1234567{'status' : 'ok'}";
+//const std::string REPLY = "1234567{'status' : 'ok'}";
+const std::string REPLY = "{'status' : 'ok'}";
 
 const std::string FRONTEND_ENDPOINT = "tcp://*:5559";
 const std::string BACKEND_ENDPOINT = "tcp://*:5560";

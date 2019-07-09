@@ -37,34 +37,27 @@ namespace internal
             int error = zmq_bind(m_frontend, frontend.c_str());
             if (error != 0)
             {
+                m_str_error = zmq_strerror(errno);
                 return ErrorType::NOT_OK;
             }
 
             error = zmq_bind(m_backend,  backend.c_str());
             if (error != 0)
             {
+                m_str_error = zmq_strerror(errno);
                 return ErrorType::NOT_OK;
             }
 
             return ErrorType::OK;
         }
 
-        void register_receiver(const Receiver& receiver)
-        {
-
-        }
-
-        void unregister_receiver(const Receiver& receiver)
-        {
-
-        }
-
         void start_loop()
         {
-            zmq_pollitem_t items [] = {
+            zmq_pollitem_t items [] =
+            {
                     { m_frontend, 0, ZMQ_POLLIN, 0 },
                     { m_backend,  0, ZMQ_POLLIN, 0 }
-                };
+            };
 
             while (true)
             {
@@ -105,18 +98,25 @@ namespace internal
                 }
             }
 
-            //TODO: add some reply mechanism if a client stucked after the REQ
+            //TODO: !IMPORTANT: add reply mechanism if a client stucked after the REQ
 
+        }
+        std::string get_str_error() const
+        {
+            return m_str_error;
         }
     private:
         void* m_context;
         void* m_backend;
         void* m_frontend;
+
+        std::string m_str_error;
+
         std::vector<Receiver> m_receivers;
 
     };
 
-    class BrokerPublisherImpl
+    class BrokerPublisherImpl final
     {
     public:
         BrokerPublisherImpl()
@@ -135,28 +135,28 @@ namespace internal
             void* m_frontend = zmq_socket(m_context, ZMQ_XSUB);
             if (!m_frontend)
             {
-                //TODO: handle this shit!
+                m_str_error = zmq_strerror(errno);
                 return ErrorType::NOT_OK;
             }
 
             void* m_backend = zmq_socket(m_context, ZMQ_XPUB);
             if (!m_backend)
             {
-                //TODO: handle this shit;
+                m_str_error = zmq_strerror(errno);
                 return ErrorType::NOT_OK;
             }
 
             int error = zmq_connect(m_frontend, frontend.c_str());
             if (error != 0)
             {
-                //TODO: handle this shit
+                m_str_error = zmq_strerror(errno);
                 return ErrorType::NOT_OK;
             }
 
             error = zmq_bind(m_backend, backend.c_str());
             if (error != 0)
             {
-                //TODO: handle this shit
+                m_str_error = zmq_strerror(errno);
                 return ErrorType::NOT_OK;
             }
 
@@ -169,13 +169,21 @@ namespace internal
             int error = zmq_proxy(m_frontend, m_backend, NULL);
             if (error != 0)
             {
+                m_str_error = zmq_strerror(errno);
                 std::cout << "Error during proxy bind is - " << zmq_strerror(errno) << std::endl;
             }
         }
+        std::string get_str_error() const
+        {
+            return m_str_error;
+        }
+
     private:
         void* m_context;
         void* m_frontend;
         void* m_backend;
+
+        std::string m_str_error;
     };
 
 } //internal
@@ -190,19 +198,19 @@ Broker::~Broker() = default;
 
 
 
-void Broker::register_receiver(const Receiver& receiver)
-{
-    m_impl->register_receiver(receiver);
-}
+//void Broker::register_receiver(const Receiver& receiver)
+//{
+//    m_impl->register_receiver(receiver);
+//}
 
-void Broker::unregister_receiver(const Receiver& receiver)
-{
-    m_impl->unregister_receiver(receiver);
-}
+//void Broker::unregister_receiver(const Receiver& receiver)
+//{
+//    m_impl->unregister_receiver(receiver);
+//}
 
-void Broker::bind(const std::string& backend, const std::string& frontend)
+ErrorType Broker::bind(const std::string& backend, const std::string& frontend)
 {
-    m_impl->bind(backend, frontend);
+    return m_impl->bind(backend, frontend);
 }
 
 
@@ -211,6 +219,10 @@ void Broker::start_loop()
     m_impl->start_loop();
 }
 
+std::string Broker::get_str_error() const
+{
+    return m_impl->get_str_error();
+}
 
 BrokerPublisher::BrokerPublisher()
 {
@@ -228,6 +240,11 @@ ErrorType BrokerPublisher::bind(const std::string& backend, const std::string& f
 void BrokerPublisher::start_loop()
 {
     m_impl->start_loop();
+}
+
+std::string BrokerPublisher::get_str_error() const
+{
+    return m_impl->get_str_error();
 }
 
 
