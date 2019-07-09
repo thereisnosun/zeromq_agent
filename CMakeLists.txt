@@ -32,7 +32,7 @@ add_executable(wuclient wuclient.c consts.h)
 target_include_directories(wuclient PUBLIC ${ZMQ_INCLUDE_DIRS})
 target_link_libraries(wuclient PUBLIC ${LINKLIBS})
 
-add_executable(zeromq_agent zeromq_agent.cpp
+add_library(zeromq_agent SHARED
     broker_api.h
     client_api.h
     client_api.cpp
@@ -43,9 +43,20 @@ add_executable(zeromq_agent zeromq_agent.cpp
     server_api.cpp
     broker_api.cpp
     end_points.h)
+
+add_executable(zeromq_agent_test zeromq_agent.cpp
+    broker_api.h
+    client_api.h
+    general_api.h
+    server_api.h
+    end_points.h)
+
+
 target_include_directories(zeromq_agent PUBLIC ${ZMQ_INCLUDE_DIRS})
 target_link_libraries(zeromq_agent PUBLIC ${LINKLIBS} pthread )
 
+target_link_libraries(zeromq_agent_test PUBLIC zeromq_agent ${LINKLIBS} pthread )
+
 install(TARGETS wuserver DESTINATION /usr/bin COMPONENT binaries)
 install(TARGETS wuclient DESTINATION /usr/bin COMPONENT binaries)
-install(TARGETS zeromq_agent DESTINATION /usr/bin COMPONENT binaries)
+install(TARGETS zeromq_agent_test DESTINATION /usr/bin COMPONENT binaries)
