@@ -70,9 +70,10 @@ namespace internal
             {
                 zmq_msg_t message;
                 zmq_poll (items, 2, -1);
-                if (items [0].revents & ZMQ_POLLIN) {
-                    while (1) {
-                        //  Process all parts of the message
+                if (items [0].revents & ZMQ_POLLIN)
+                {
+                    while (1)
+                    {
                         zmq_msg_init (&message);
                         zmq_msg_recv (&message, m_frontend, 0);
                         int more = zmq_msg_more (&message);
@@ -82,14 +83,14 @@ namespace internal
                         zmq_msg_send (&message, m_backend, more? ZMQ_SNDMORE: 0);
                         zmq_msg_close (&message);
 
-
                         if (!more)
-                            break;      //  Last message part
+                            break;
                     }
                 }
-                if (items [1].revents & ZMQ_POLLIN) {
-                    while (1) {
-                        //  Process all parts of the message
+                if (items [1].revents & ZMQ_POLLIN)
+                {
+                    while (1)
+                    {
                         zmq_msg_init (&message);
                         zmq_msg_recv (&message, m_backend, 0);
                         int more = zmq_msg_more (&message);
@@ -99,7 +100,7 @@ namespace internal
                         zmq_msg_send (&message, m_frontend, more? ZMQ_SNDMORE: 0);
                         zmq_msg_close (&message);
                         if (!more)
-                            break;      //  Last message part
+                            break;
                     }
                 }
             }

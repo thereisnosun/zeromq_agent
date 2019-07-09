@@ -12,6 +12,7 @@ const std::string CLIP_REQUEST = "{'msg_type' : 'ipc', 'name': 'clip_request', '
 const std::string ADD_CAMERA = "{'msg_type' : 'ipc', 'name': 'add_camera|edit_camera|delete_camera', "
                                "'data': <camera_json_info>}";
 
+const std::string REPLY = "1234567{'status' : 'ok'}";
 
 const std::string FRONTEND_ENDPOINT = "tcp://*:5559";
 const std::string BACKEND_ENDPOINT = "tcp://*:5560";
@@ -59,7 +60,7 @@ int req_rep_client(const std::string& end_point)
 int req_rep_server(const std::string& end_point_server)
 {
     zmq::Server server{zmq::SocketType::REPLY};
-    const std::string REPLY = "{'status' : 'ok'}";
+
 
     if (server.bind(end_point_server) != zmq::ErrorType::OK)
     {
@@ -135,7 +136,6 @@ int pub_sub_server(const std::string& end_point)
 int req_rep_worker(const std::string& end_point)
 {
     zmq::Client client{zmq::SocketType::REPLY};
-    const std::string REPLY = "{'status' : 'ok'}";
 
     if (client.connect(end_point) != zmq::ErrorType::OK)
     {
@@ -228,7 +228,6 @@ int req_rep_client_async(const std::string& end_point)
 int req_rep_server_async(const std::string& end_point_server)
 {
     zmq::Server server{zmq::SocketType::REPLY};
-    const std::string REPLY = "{'status' : 'ok'}";
 
     if (server.bind(end_point_server) != zmq::ErrorType::OK)
     {

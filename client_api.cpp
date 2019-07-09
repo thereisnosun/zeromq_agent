@@ -112,6 +112,7 @@ namespace internal
             {
                 status.error = ErrorType::NOT_OK;
             }
+            zmq_msg_close(&msg);
             return status;
         }
 

@@ -94,10 +94,13 @@ namespace internal
             }
             status.bytes_send = zmq_msg_send (&msg, m_socket, flags);
 
+            std::cout << "Bytes sent - " << status.bytes_send << std::endl;
             if (status.bytes_send < 0)
             {
+
                 status.error = ErrorType::NOT_OK;
             }
+            zmq_msg_close(&msg);
             return status;
         }
 
