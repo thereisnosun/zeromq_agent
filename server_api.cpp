@@ -82,28 +82,14 @@ namespace internal
 
         Status publish_worker(const IMessage &message, int flags)
         {
-            Status status;
-            zmq_msg_t msg;
-            const std::string str_message{static_cast<char*>(message.get_data()), message.get_size()};
-            std::cout << "publish_worker - " << str_message << std::endl;
 
-            int error = zmq_msg_init_data (&msg, message.get_data(), message.get_size(), NULL, NULL);
-            if (error != 0)
+            Status status;
+            if (zmq_send(m_socket, message.get_data(), message.get_size(), 0) < 0)
             {
-                std::cout << "SHIT!\n";
-                status.error = ErrorType::NOT_OK;
                 m_str_error = zmq_strerror(errno);
+                status.error = ErrorType::NOT_OK;
                 return status;
             }
-            status.bytes_send = zmq_msg_send (&msg, m_socket, flags);
-
-            std::cout << "Bytes sent - " << status.bytes_send << std::endl;
-            if (status.bytes_send < 0)
-            {
-                m_str_error = zmq_strerror(errno);
-                status.error = ErrorType::NOT_OK;
-            }
-            zmq_msg_close(&msg);
             return status;
         }
 
